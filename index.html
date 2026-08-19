@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="countzero — security research, tools, and notes from the terminal.">
+  <meta name="theme-color" content="#080b0a">
+  <title>countzero.sh</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body data-page="home">
+  <a class="skip-link" href="#content">skip to content</a>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <main class="shell" id="content">
+    <header class="site-header">
+      <a class="identity" href="./" aria-label="countzero home">
+        <img class="avatar" src="assets/avatar.svg" alt="" width="72" height="72">
+        <span><strong>countzero.sh</strong><small>operator // researcher // builder</small></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a aria-current="page" href="./">home</a>
+        <a href="posts/">research</a>
+        <a href="projects/">projects</a>
+        <a href="about/">about</a>
+      </nav>
+    </header>
+
+    <section class="hero terminal" aria-labelledby="hero-title">
+      <div class="terminal-bar"><span></span><span></span><span></span><p>tty0 — countzero</p></div>
+      <div class="terminal-body">
+        <p class="prompt"><span>visitor@countzero</span>:~$ <span id="boot-command">./countzero.sh</span></p>
+        <div id="terminal-output" aria-live="polite">
+          <p><span class="muted">[boot]</span> loading field notes...</p>
+          <p><span class="ok">[ ok ]</span> secure channel established</p>
+        </div>
+        <h1 id="hero-title">Exploring systems.<br><em>Documenting the unknown.</em></h1>
+        <p class="lede">Security research, Unix craft, digital archaeology, and experiments at the edge of human and machine agency.</p>
+        <p class="prompt active"><span>visitor@countzero</span>:~$ <span class="cursor" aria-hidden="true"></span><span class="sr-only">terminal ready</span></p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="index-title">
+      <div class="section-heading"><p>./index</p><h2 id="index-title">Selected paths</h2></div>
+      <div class="card-grid">
+        <article class="card"><p class="card-number">01</p><h3>Research</h3><p>Field notes on application security, adversarial testing, and autonomous agents.</p><a href="posts/">open archive <span aria-hidden="true">→</span></a></article>
+        <article class="card"><p class="card-number">02</p><h3>Projects</h3><p>Small tools, controlled experiments, and systems built to understand other systems.</p><a href="projects/">inspect projects <span aria-hidden="true">→</span></a></article>
+        <article class="card"><p class="card-number">03</p><h3>About</h3><p>The operator behind the prompt, the working principles, and ways to connect.</p><a href="about/">read profile <span aria-hidden="true">→</span></a></article>
+      </div>
+    </section>
+
+    <section class="signal" aria-label="Current status"><span class="status-dot"></span><p><strong>status:</strong> online / building in public</p><time id="utc-clock" datetime="">UTC --:--:--</time></section>
+    <footer><p>© <span id="year">2026</span> countzero // built with plain HTML, CSS &amp; JS</p><a href="#content">return_to_top()</a></footer>
+  </main>
+</body>
+</html>
