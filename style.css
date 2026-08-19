@@ -265,7 +265,10 @@ footer a { color: var(--green-dim); text-decoration: none; }
   object-position: center;
   filter: saturate(.92) contrast(1.03);
 }
-.profile-photo figcaption { display: none; }
+.profile-photo figcaption {
+  display: block;
+  padding-top: .8rem;
+}
 .linkedin-link {
   display: inline-flex;
   align-items: center;
@@ -279,6 +282,10 @@ footer a { color: var(--green-dim); text-decoration: none; }
 .linkedin-link:hover {
   border-color: var(--green);
   background: var(--panel-2);
+}
+.profile-photo figcaption .linkedin-link {
+  width: 100%;
+  justify-content: flex-start;
 }
 .linkedin-icon {
   display: inline-grid;
