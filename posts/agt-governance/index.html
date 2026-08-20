@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Evidence-led security research on Microsoft Agent Governance Toolkit, runtime enforcement, and the governance foundations required before deployment.">
+  <meta name="theme-color" content="#080b0a">
+  <title>Governing AI before governing agents // countzero.sh</title>
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../style.css">
+  <script src="../../script.js" defer></script>
+</head>
+<body data-page="research-article">
+  <a class="skip-link" href="#article">skip to article</a><div class="noise" aria-hidden="true"></div><div class="scanlines" aria-hidden="true"></div>
+  <main class="shell" id="content">
+    <header class="site-header"><a class="identity" href="../../"><img class="avatar" src="../../assets/avatar.svg" alt="" width="72" height="72"><span><strong>Count Zero</strong><small>Security Advisor // Hacker // Researcher</small></span></a><nav aria-label="Main navigation"><a href="../../">home</a><a aria-current="page" href="../">research</a><a href="../../projects/">projects</a><a href="../../about/">about</a></nav></header>
+
+    <article class="research-article" id="article">
+      <header class="article-header">
+        <div class="article-kicker"><span>RESEARCH / AI GOVERNANCE</span><time datetime="2026-08-19">2026.08.19</time><a class="language-link" href="es/" lang="es" hreflang="es">leer en español</a></div>
+        <h1>Governing AI before<br><em>governing agents.</em></h1>
+        <p class="article-deck">What Microsoft Agent Governance Toolkit can enforce at runtime, what remains outside its boundary, and why policy code is not a substitute for an AI governance program.</p>
+        <div class="article-meta"><span>Security research</span><span>12 min read</span><span>PoC verdict: conditional go</span></div>
+      </header>
+
+      <figure class="article-hero"><img src="../../assets/agt-governance-hero.png" width="1672" height="941" alt="An abstract AI system sending tool and data paths through a green policy gate, while an amber path remains outside the boundary."><figcaption>Conceptual view of the tested boundary: enforcement applies to mediated paths; alternate paths remain a governance and architecture problem.</figcaption></figure>
+
+      <div class="article-layout">
+        <aside class="article-toc" aria-label="On this page"><p>./on_this_page</p><ol><li><a href="#tldr">TL;DR</a></li><li><a href="#before-agt">Before AGT</a></li><li><a href="#research-question">Research question</a></li><li><a href="#observed-model">Observed model</a></li><li><a href="#findings">Findings</a></li><li><a href="#risk-reading">Risk reading</a></li><li><a href="#decision">PoC decision</a></li><li><a href="#opinion">Final opinion</a></li></ol></aside>
+
+        <div class="article-body">
+          <section class="tldr" id="tldr"><p class="eyebrow">TL;DR</p><p>AGT produced useful enforcement when an operation traversed an instrumented wrapper or MCP server: deterministic decisions, pre-execution denial, limits, integrity checks, and correlatable evidence. It did not create a universal boundary around GitHub Copilot. More importantly, AGT is a runtime security component—not an AI governance program. An organization still needs ownership, inventory, risk classification, policy, lifecycle controls, assurance, and accountability before it can deploy enforcement responsibly.</p></section>
+
+          <section id="before-agt"><p class="section-label">01 / GOVERNANCE FOUNDATION</p><h2>The work that must exist before AGT</h2><p>A policy engine answers a narrow question: given this context and this proposed action, what verdict should the host enforce? It cannot decide which AI systems the organization accepts, who owns their risk, what data they may process, or when they must be retired. Those are governance decisions.</p><p>Before introducing AGT—or any agent runtime control—the organization needs a minimum control plane:</p>
+            <div class="governance-stack" role="list" aria-label="AI governance foundations">
+              <div role="listitem"><strong>01</strong><span><b>Strategy &amp; principles</b>Approved use cases, risk appetite, prohibited practices, and alignment with business objectives.</span></div>
+              <div role="listitem"><strong>02</strong><span><b>Inventory &amp; ownership</b>System register, model and agent inventory, accountable business owner, technical owner, and data owner.</span></div>
+              <div role="listitem"><strong>03</strong><span><b>Risk classification</b>Impact tier, autonomy, data sensitivity, tool privileges, external dependencies, and human oversight.</span></div>
+              <div role="listitem"><strong>04</strong><span><b>Policy &amp; lifecycle</b>Intake, assessment, testing, approval, change control, monitoring, incident response, and retirement.</span></div>
+              <div role="listitem"><strong>05</strong><span><b>Assurance &amp; accountability</b>Control testing, evidence retention, exceptions, metrics, independent review, and named responsibility.</span></div>
+              <div role="listitem" class="runtime-layer"><strong>06</strong><span><b>Runtime enforcement</b>AGT or equivalent policy enforcement points, approvals, limits, tool controls, and telemetry.</span></div>
+            </div>
+            <p>AGT belongs in the sixth layer and can provide evidence back to the fifth. It does not create the first five. Deploying it without them risks automating policies whose owner, scope, legal basis, and exception process are undefined.</p>
+          </section>
+
+          <section id="research-question"><p class="section-label">02 / METHOD</p><h2>The question was not “does a policy exist?”</h2><blockquote>Can the organization guarantee that every consequential action traverses the point where AGT decides—and that a <code>deny</code> prevents the effect?</blockquote><p>This framing separates documentation from enforcement. A compliance mapping does not prove a host applies a verdict. A log is not a preventive control. A well-written rule has little value when the agent retains a parallel route to the same resource.</p></section>
+
+          <section id="observed-model"><p class="section-label">03 / TRUST BOUNDARY</p><h2>The security model we observed</h2>
+            <figure class="architecture-figure" aria-labelledby="architecture-caption"><div class="architecture-flow"><div><span>developer / cloud agent</span></div><i aria-hidden="true">→</i><div class="gate"><span>governed MCP</span><small>ACS policy gate</small></div><i aria-hidden="true">→</i><div><span>simulated tool</span><small>correlated evidence</small></div></div><div class="bypass-flow"><span>alternate terminal / tool</span><i aria-hidden="true">→</i><span>outside tested boundary</span></div><figcaption id="architecture-caption">Figure 1. The host must call the policy runtime and enforce its result. Any alternate path changes the security claim.</figcaption></figure>
+            <p>ACS acted as a policy decision point. The host assembled context, called the runtime, and enforced the result. That separation enables portable policy, but it also makes the host and integration path part of the trusted computing base.</p>
+          </section>
+
+          <section id="findings"><p class="section-label">04 / EMPIRICAL FINDINGS</p><h2>Enforcement exists, but it is opt-in</h2><p>Governed operations produced real <code>ALLOW</code> and <code>DENY</code> outcomes. A shell simulation was rejected before its implementation ran, with <code>executed: false</code> recorded in the correlated event. That is enforcement rather than observability.</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>agt-lab / runtime-controls</p></div><pre><code><span class="cmd">$ python test_remaining_runtime_controls.py</span>
+DEFAULT rm -rf: allowed=True
+CONFIGURED rm -rf: allowed=False
+CALL 3: allowed=False reason='Rate limit exceeded'
+CUMULATIVE 110: allowed=False reason='Token budget exceeded (110/100)'</code></pre></div>
+            <p>The default result matters: dangerous-command awareness was not a transparent sandbox. Explicit patterns changed the verdict, but text-based denylists admit variants. For command governance, structured operations and strict allowlists are more defensible than unrestricted shell interpretation.</p>
+
+            <h3>Useful primitives still require engineering</h3><p>Rate limiting, token budgets, maximum tool calls, concurrency, content hashes, supply-chain validation, human approval, and audit integrity worked when configured. Their value comes from composition. Their risk comes from assuming that composition happens automatically.</p>
+
+            <h3>Integrity is not confidentiality</h3><div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>agt-lab / audit-integrity</p></div><pre><code><span class="cmd">$ python test_audit_integrity_runtime.py</span>
+BEFORE TAMPER: (True, 'Chain integrity verified')
+AFTER TAMPER:  (False, 'Entry 0 hash mismatch')</code></pre></div><p>The audit chain detected controlled mutation. A separate exercised path retained structured fictitious secrets in clear text. Events therefore need data minimization and key- and value-aware redaction before export to a SIEM.</p>
+
+            <h3>AGT is not a sandbox</h3><p>Path tests reached fixtures outside the workspace, and a native terminal path could act without producing ACS evidence. This is an architectural boundary. AGT does not replace operating-system permissions, process isolation, EDR, DLP, workload identity, secret brokering, or egress controls.</p>
+          </section>
+
+          <section id="risk-reading"><p class="section-label">05 / SECURITY INTERPRETATION</p><h2>Control coverage and residual risk</h2><div class="risk-table-wrap"><table class="risk-table"><thead><tr><th>Domain</th><th>Observed result</th><th>Required response</th></tr></thead><tbody><tr><td>Policy enforcement</td><td>Effective on mediated paths</td><td>Make routing mandatory</td></tr><tr><td>Tool misuse</td><td>Allow, deny, approval, and limits</td><td>Configure per tool and identity</td></tr><tr><td>Prompt/tool injection</td><td>Detection and blocking available</td><td>Scan definitions and responses</td></tr><tr><td>Integrity</td><td>Hashes and tamper evidence</td><td>Persist and protect baselines</td></tr><tr><td>Filesystem / terminal</td><td>No universal isolation</td><td>Add sandbox and endpoint controls</td></tr><tr><td>Exfiltration</td><td>No demonstrated egress boundary</td><td>Use proxy, DLP, firewall, secret broker</td></tr><tr><td>Governance</td><td>Runtime component only</td><td>Maintain inventory, ownership, policy, lifecycle</td></tr></tbody></table></div><p>From a CISSP perspective, AGT fits defense in depth as an application-level policy enforcement point. By itself it does not satisfy complete mediation, least privilege, separation of duties, or data governance. When an alternate path exists, trust must move down to identity, endpoint, sandbox, network, and resource permissions.</p></section>
+
+          <section id="decision"><p class="section-label">06 / DECISION</p><h2>Conditional go for a narrow pilot</h2><p>A limited pilot is defensible only when tools are allowlisted and published through the governed path; terminal, filesystem, network, identity, and secrets have compensating controls; policy artifacts and fingerprints are protected; runtime failures fail closed; and evidence remains correlatable without retaining sensitive content.</p><div class="decision-box"><strong>CONDITIONAL GO</strong><p>Use AGT for selected, measurable integrations after foundational AI governance exists. Do not present it as global Copilot protection or as a replacement for an AI management system.</p></div></section>
+
+          <section id="opinion"><p class="section-label">07 / FINAL OPINION</p><h2>Governance cannot be installed with <code>pip</code></h2><p>AGT is most compelling when it is treated as architecture rather than a promise of blanket protection. It can translate policy into consistent runtime decisions at intervention points an organization can actually impose. That is valuable—but it is downstream of governance.</p><p>The mature sequence is: know the AI systems, assign responsibility, classify risk, define policy, establish lifecycle controls, then automate selected decisions and collect evidence. Reversing that order creates technically sophisticated enforcement with no defensible governance context.</p><p>I would use AGT to govern selected MCP integrations. I would not use it to justify reducing sandboxing, IAM, DLP, EDR, network controls, or human accountability. The next useful test is complete mediation over one low-risk corporate use case, including bypass analysis and developer-impact measurement.</p></section>
+
+          <section class="references" aria-labelledby="references-title"><p class="section-label">SOURCES</p><h2 id="references-title">References</h2><ol><li><a href="https://microsoft.github.io/agent-governance-toolkit/packages/agent-control-specification/">Microsoft AGT — Agent Control Specification</a></li><li><a href="https://microsoft.github.io/agent-governance-toolkit/integrations/mcp-trust-guide/">Microsoft AGT — MCP Trust Guide</a></li><li><a href="https://github.com/microsoft/agent-governance-toolkit">Official Microsoft Agent Governance Toolkit repository</a></li><li><a href="https://www.nist.gov/itl/ai-risk-management-framework">NIST AI Risk Management Framework</a></li><li><a href="https://www.iso.org/standard/81230.html">ISO/IEC 42001 — AI management systems</a></li></ol><p class="version-note">Version note: the empirical results describe the tested AGT core 4.1.0 / ACS 0.3.1b1 snapshot. Current upstream documentation describes ACS as the AGT 5.0 policy layer in public preview; APIs and manifest details may change before GA.</p></section>
+        </div>
+      </div>
+    </article>
+    <footer><p>© <span id="year">2026</span> countzero // research archive</p><a href="#article">return_to_top()</a></footer>
+  </main>
+</body></html>

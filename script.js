@@ -5,6 +5,17 @@
   const command = document.querySelector('#boot-command');
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  const tocLinks = [...document.querySelectorAll('.article-toc a[href^="#"]')];
+  const tocSections = tocLinks.map((link) => document.getElementById(link.hash.slice(1))).filter(Boolean);
+  if ('IntersectionObserver' in window && tocSections.length) {
+    const tocObserver = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (!visible) return;
+      tocLinks.forEach((link) => link.toggleAttribute('aria-current', link.hash === `#${visible.target.id}`));
+    }, { rootMargin: '-12% 0px -72% 0px' });
+    tocSections.forEach((section) => tocObserver.observe(section));
+  }
+
   if (year) year.textContent = new Date().getFullYear();
 
   const updateClock = () => {
