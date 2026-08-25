@@ -144,6 +144,67 @@ h1 em {
 }
 @keyframes blink { 50% { opacity: 0; } }
 
+.operator-console {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) minmax(250px, 330px);
+  min-height: 620px;
+  margin: 5rem 0 6rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(rgba(109, 255, 154, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(109, 255, 154, .035) 1px, transparent 1px),
+    radial-gradient(circle at 78% 20%, rgba(47, 191, 98, .13), transparent 28rem),
+    #0a0e0c;
+  background-size: 42px 42px, 42px 42px, auto, auto;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .42);
+}
+.operator-console::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 110px;
+  height: 110px;
+  border-top: 2px solid var(--green);
+  border-right: 2px solid var(--green);
+  opacity: .55;
+}
+.console-rail {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.2rem 0;
+  border-right: 1px solid var(--line);
+  color: #526057;
+  font-size: .62rem;
+  letter-spacing: .14em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.console-rail span:first-child { margin-bottom: auto; color: var(--green); }
+.console-main { display: flex; flex-direction: column; justify-content: center; padding: clamp(2rem, 6vw, 5rem); }
+.console-kicker { display: flex; align-items: center; gap: .7rem; margin: 0; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; }
+.console-main h1 { margin: 2.5rem 0 1.5rem; font-size: clamp(4rem, 10vw, 8.5rem); line-height: .72; }
+.console-main h1 span { letter-spacing: -.075em; }
+.console-main h1 em { display: inline-block; margin-left: .2em; -webkit-text-stroke-color: var(--green); }
+.console-statement { margin: 1rem 0 2.5rem; color: #cbd6cf; font: 500 clamp(1.05rem, 2vw, 1.35rem)/1.35 "Space Grotesk", sans-serif; }
+.console-actions { display: flex; flex-wrap: wrap; gap: .8rem; }
+.console-actions a { display: grid; grid-template-columns: auto 1fr auto; gap: .8rem; min-width: 210px; padding: .85rem 1rem; border: 1px solid var(--line); background: rgba(8, 11, 10, .72); color: var(--text); font-size: .72rem; text-decoration: none; text-transform: uppercase; }
+.console-actions a:hover { border-color: var(--green); background: rgba(47, 191, 98, .08); }
+.console-actions span { color: var(--green-dim); }
+.console-actions b { color: var(--green); font-weight: 400; }
+.console-status { align-self: end; margin: 0 2rem 2rem 0; padding: 1.4rem; border: 1px solid var(--line); background: rgba(8, 11, 10, .82); backdrop-filter: blur(8px); }
+.console-status__label { margin: 0 0 1.2rem; color: var(--green); font-size: .68rem; text-transform: uppercase; }
+.console-status dl { margin: 0; }
+.console-status dl div { display: flex; justify-content: space-between; gap: 1rem; padding: .65rem 0; border-top: 1px solid var(--line); font-size: .7rem; text-transform: uppercase; }
+.console-status dt { color: #68766d; }
+.console-status dd { margin: 0; color: #c0cbc4; text-align: right; }
+.console-status dd.online { color: var(--green); }
+.console-status dd.online::before { content: "● "; font-size: .6em; }
+.console-signature { margin: 1.5rem 0 0; color: #78857d; font-size: .7rem; line-height: 1.6; }
+
 .section { margin-bottom: 6rem; }
 .section-heading {
   display: flex;
@@ -440,7 +501,7 @@ footer a { color: var(--green-dim); text-decoration: none; }
 .references a { color: #b7c4bc; text-underline-offset: .22rem; }
 .version-note { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: .75rem; }
 
-/* Project lab articles */
+/* Lab articles */
 .lab-principles,
 .result-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 2rem 0; border: 1px solid var(--line); background: var(--line); }
 .lab-principles > div,
@@ -501,6 +562,10 @@ footer a { color: var(--green-dim); text-decoration: none; }
   nav { width: 100%; gap: 0; justify-content: space-between; }
   .terminal { margin: 2rem 0 4rem; }
   .terminal-body { min-height: 440px; }
+  .operator-console { grid-template-columns: 40px 1fr; min-height: 660px; margin: 2rem 0 4rem; }
+  .console-main { padding: 2rem; }
+  .console-main h1 { margin-top: 2rem; }
+  .console-status { grid-column: 2; margin: 0 2rem 2rem; }
   .card-grid { grid-template-columns: 1fr; }
   .card { min-height: 240px; }
   .card h3 { margin-top: 2rem; }

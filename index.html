@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Count Zero — security research, tools, and notes from the terminal.">
+  <meta name="description" content="Count Zero — security research, controlled labs, and notes from the terminal.">
   <meta name="theme-color" content="#080b0a">
   <title>Count Zero</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -24,30 +24,38 @@
       <nav aria-label="Main navigation">
         <a aria-current="page" href="./">home</a>
         <a href="posts/">research</a>
-        <a href="projects/">projects</a>
+        <a href="labs/">labs</a>
         <a href="about/">about</a>
       </nav>
     </header>
 
-    <section class="hero terminal" aria-labelledby="hero-title">
-      <div class="terminal-bar"><span></span><span></span><span></span><p>tty0 — countzero</p></div>
-      <div class="terminal-body">
-        <p class="prompt"><span>visitor@countzero</span>:~$ <span id="boot-command">./countzero.sh</span></p>
-        <div id="terminal-output" aria-live="polite">
-          <p><span class="muted">[boot]</span> loading field notes...</p>
-          <p><span class="ok">[ ok ]</span> secure channel established</p>
+    <section class="hero operator-console" aria-labelledby="hero-title">
+      <div class="console-rail" aria-hidden="true"><span>CZ/00</span><span>PUBLIC NODE</span><span>EST. 2026</span></div>
+      <div class="console-main">
+        <p class="console-kicker"><span class="status-dot"></span> Independent security research node</p>
+        <h1 id="hero-title"><span>COUNT</span><br><em>ZERO</em></h1>
+        <p class="console-statement">Exploring systems.<br>Documenting the unknown.</p>
+        <div class="console-actions">
+          <a href="posts/"><span>01</span> enter research <b aria-hidden="true">↗</b></a>
+          <a href="labs/"><span>02</span> inspect labs <b aria-hidden="true">↗</b></a>
         </div>
-        <h1 id="hero-title">Exploring systems.<br><em>Documenting the unknown.</em></h1>
-        <p class="lede">Security research, Unix craft, digital archaeology, and experiments at the edge of human and machine agency.</p>
-        <p class="prompt active"><span>visitor@countzero</span>:~$ <span class="cursor" aria-hidden="true"></span><span class="sr-only">terminal ready</span></p>
       </div>
+      <aside class="console-status" aria-label="Node status">
+        <p class="console-status__label">// current signal</p>
+        <dl>
+          <div><dt>focus</dt><dd>Present Day, Present Time.</dd></div>
+          <div><dt>mode</dt><dd>evidence first</dd></div>
+          <div><dt>node</dt><dd class="online">online · Close the world, open the next</dd></div>
+        </dl>
+        <p class="console-signature">Security research, Unix craft, digital archaeology, and experiments at the edge of human and machine agency.</p>
+      </aside>
     </section>
 
     <section class="section" aria-labelledby="index-title">
       <div class="section-heading"><p>./index</p><h2 id="index-title">Selected paths</h2></div>
       <div class="card-grid">
         <article class="card"><p class="card-number">01</p><h3>Research</h3><p>Field notes on application security, adversarial testing, and autonomous agents.</p><a href="posts/">open archive <span aria-hidden="true">→</span></a></article>
-        <article class="card"><p class="card-number">02</p><h3>Projects</h3><p>Small tools, controlled experiments, and systems built to understand other systems.</p><a href="projects/">inspect projects <span aria-hidden="true">→</span></a></article>
+        <article class="card"><p class="card-number">02</p><h3>Labs</h3><p>Controlled experiments, technical validation, and reproducible evidence from systems under test.</p><a href="labs/">inspect labs <span aria-hidden="true">→</span></a></article>
         <article class="card"><p class="card-number">03</p><h3>About</h3><p>The perspective behind the research, the working principles, and ways to connect.</p><a href="about/">read profile <span aria-hidden="true">→</span></a></article>
       </div>
     </section>
