@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Laboratorio práctico para construir y depurar un stack de pentesting agéntico local con Hermes, Ollama, qwen3.5:9b-64k, Exegol, mitmproxy y persistencia mediante my-resources.">
+  <meta name="theme-color" content="#080b0a">
+  <title>Hermes, Ollama y Exegol: stack agéntico local // countzero.sh</title>
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../../style.css">
+  <script src="../../../script.js" defer></script>
+</head>
+<body data-page="lab-article">
+  <a class="skip-link" href="#article">ir al laboratorio</a>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+  <main class="shell" id="content">
+    <header class="site-header">
+      <a class="identity" href="../../../">
+        <img class="avatar" src="../../../assets/avatar.svg" alt="" width="72" height="72">
+        <span><strong>Count Zero</strong><small>Security Advisor // Hacker // Researcher</small></span>
+      </a>
+      <nav aria-label="Navegación principal"><a href="../../../">home</a><a href="../../../posts/">research</a><a aria-current="page" href="../../">labs</a><a href="../../../about/">about</a></nav>
+    </header>
+
+    <article class="research-article lab-article" id="article">
+      <header class="article-header">
+        <div class="article-kicker"><span>LAB 003</span><time datetime="2026-08-25">2026.08.25</time><a class="language-link" href="../" lang="en" hreflang="en">read in English</a></div>
+        <h1>Un agente local que<br><em>realmente usa herramientas.</em></h1>
+        <p class="article-deck">Construcción y depuración de un stack privado de pentesting agéntico con Hermes, Ollama, qwen3.5:9b-64k y Exegol, hasta demostrar que las llamadas a herramientas producen ejecución real y no texto convincente.</p>
+        <div class="article-meta"><span>Laboratorio agéntico local</span><span>22 min de lectura</span><span>macOS + Exegol</span></div>
+      </header>
+
+      <figure class="article-hero"><img src="../../../assets/hermes-ollama-exegol-hero.png" width="1672" height="941" alt="Un operador anónimo observa terminales CRT interconectados que enlazan un núcleo de inferencia local con un entorno operativo aislado."><figcaption>Un núcleo de inferencia local, un agent harness y un entorno aislado de herramientas conectados como un único sistema observable.</figcaption></figure>
+
+      <div class="article-layout">
+        <aside class="article-toc" aria-label="En esta página">
+          <p>./indice_lab</p>
+          <ol>
+            <li><a href="#tldr">TL;DR</a></li>
+            <li><a href="#arquitectura">Arquitectura</a></li>
+            <li><a href="#componentes">Componentes</a></li>
+            <li><a href="#instalacion">Instalación</a></li>
+            <li><a href="#persistencia">Persistencia</a></li>
+            <li><a href="#fallo">Modo de fallo</a></li>
+            <li><a href="#tool-calling">Tool calling</a></li>
+            <li><a href="#mitmproxy">mitmproxy</a></li>
+            <li><a href="#contexto">Contexto 64K</a></li>
+            <li><a href="#trabajo-largo">Trabajo prolongado</a></li>
+            <li><a href="#lecciones">Lecciones</a></li>
+            <li><a href="#conclusion">Conclusión</a></li>
+          </ol>
+        </aside>
+
+        <div class="article-body">
+          <section class="tldr" id="tldr">
+            <p class="eyebrow">TL;DR</p>
+            <p>El modelo podía generar llamadas nativas a herramientas a través de Ollama, pero Hermes inicialmente devolvía los comandos como texto en lugar de ejecutarlos. La prueba directa de la API aisló el modelo y el transporte; mitmproxy confirmó que Hermes enviaba los esquemas de herramientas; alinear Ollama y Hermes sobre un contexto dedicado de 64K produjo ejecución estructurada en el terminal del laboratorio. La arquitectura estable mantiene Ollama en macOS, ejecuta Hermes dentro de Exegol y persiste las herramientas personalizadas mediante <code>my-resources</code>.</p>
+          </section>
+
+          <section id="arquitectura">
+            <p class="section-label">01 / ARQUITECTURA</p>
+            <h2>Mantener la inferencia en el host y la operación en Exegol</h2>
+            <p>El diseño final separa la inferencia local del entorno de seguridad desechable. Ollama conserva la aceleración nativa de Apple Metal en macOS; Hermes lo alcanza mediante <code>host.docker.internal</code> y opera las herramientas disponibles dentro de Exegol.</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>arquitectura / ruta final</p></div><pre><code>macOS host
+├── Ollama :11434
+│   └── qwen3.5:9b-64k · num_ctx=64000
+│
+└── Exegol
+    ├── Hermes Agent
+    │   ├── terminal
+    │   ├── archivos
+    │   └── herramientas de seguridad de Exegol
+    └── /opt/my-resources
+        ├── launcher persistente
+        ├── runtime
+        └── configuración</code></pre></div>
+            <div class="lab-principles"><div><strong>razonar</strong><span>qwen3.5:9b-64k</span></div><div><strong>inferir</strong><span>Ollama en macOS</span></div><div><strong>operar</strong><span>Hermes en Exegol</span></div><div><strong>persistir</strong><span>my-resources</span></div></div>
+          </section>
+
+          <section id="componentes">
+            <p class="section-label">02 / COMPONENTES</p>
+            <h2>Un modelo no es un agente</h2>
+            <h3>El LLM</h3>
+            <p>El modelo de lenguaje es el componente de razonamiento. Puede generar un comando, pero generarlo no equivale a ejecutarlo.</p>
+            <div class="code-frame"><div class="code-frame__title">razonamiento frente a acción</div><pre><code>LLM → "pwd"                         # texto generado
+LLM → tool_call("terminal", "pwd")  # intención estructurada
+harness → shell → stdout             # ejecución observada</code></pre></div>
+            <h3>Ollama</h3>
+            <p>Ollama carga el modelo, administra la inferencia y expone tanto su API nativa como una interfaz compatible con OpenAI bajo <code>/v1</code>.</p>
+            <h3>Hermes</h3>
+            <p>Hermes es el agent harness que rodea al LLM. Aporta el system prompt, las definiciones de herramientas, el bucle de ejecución, las operaciones de archivos, la gestión del contexto y las observaciones que permiten al modelo actuar sobre un entorno.</p>
+            <blockquote>El agente efectivo es el modelo, la configuración de inferencia, el harness, las herramientas y el hardware funcionando como un único sistema.</blockquote>
+          </section>
+
+          <section id="instalacion">
+            <p class="section-label">03 / INSTALACIÓN Y CONEXIÓN</p>
+            <h2>Instalar Hermes y alcanzar Ollama en el host</h2>
+            <p>Revisa cualquier instalador remoto antes de ejecutarlo y fija una revisión de confianza cuando la reproducibilidad sea importante.</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / instalar Hermes</p></div><pre><code><span class="cmd">$ curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash</span>
+
+Salida esperada (resumida):
+Hermes Agent installed successfully
+Run: hermes</code></pre></div>
+            <p>El texto exacto del instalador puede cambiar. La comprobación fiable es que el CLI se resuelva y devuelva su información de uso.</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / verificar CLI</p></div><pre><code><span class="cmd">$ hermes --help</span>
+
+Salida esperada (resumida):
+Usage: hermes [OPTIONS] COMMAND [ARGS]...</code></pre></div>
+            <p>Desde Exegol, comprueba la ruta hasta Ollama en el host:</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>Exegol / conectividad con Ollama</p></div><pre><code><span class="cmd">$ curl -s http://host.docker.internal:11434/api/tags</span>
+
+Salida esperada (estructura):
+{"models":[{"name":"qwen3.5:9b-64k",...}]}</code></pre></div>
+            <p>Configura el endpoint compatible personalizado mediante Hermes:</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>Exegol / configuración</p></div><pre><code><span class="cmd">$ hermes setup</span>
+
+Salida esperada (interactiva):
+Select provider: Custom / OpenAI-compatible
+Base URL: http://host.docker.internal:11434/v1
+Model: qwen3.5:9b-64k</code></pre></div>
+            <div class="code-frame"><div class="code-frame__title">configuración representativa del modelo en Hermes</div><pre><code>model:
+  default: qwen3.5:9b-64k
+  provider: custom
+  base_url: http://host.docker.internal:11434/v1
+  context_length: 64000
+  api_mode: chat_completions</code></pre></div>
+            <p class="version-note">Las claves de configuración pueden variar entre versiones de Hermes. Confírmalas contra el archivo generado por la versión instalada.</p>
+          </section>
+
+          <section id="persistencia">
+            <p class="section-label">04 / PERSISTENCIA</p>
+            <h2>Sacar las herramientas personalizadas del contenedor desechable</h2>
+            <p>Exegol mapea el directorio <code>~/.exegol/my-resources/</code> del host dentro del contenedor como <code>/opt/my-resources</code>. Un layout persistente puede separar el launcher, el runtime y la configuración:</p>
+            <div class="code-frame"><div class="code-frame__title">/opt/my-resources</div><pre><code>/opt/my-resources/
+├── bin/
+│   └── hermes
+├── tools/
+│   └── hermes/
+│       └── venv/
+└── config/
+    └── hermes/</code></pre></div>
+            <p>El launcher persistente contiene:</p>
+            <div class="code-frame"><div class="code-frame__title">/opt/my-resources/bin/hermes</div><pre><code>#!/bin/sh
+exec /opt/my-resources/tools/hermes/venv/bin/hermes "$@"</code></pre></div>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>Exegol / verificar persistencia</p></div><pre><code><span class="cmd">$ chmod +x /opt/my-resources/bin/hermes</span>
+Salida esperada: sin stdout; código de salida 0
+
+<span class="cmd">$ which hermes</span>
+Salida esperada:
+/opt/my-resources/bin/hermes</code></pre></div>
+            <p>Reinicia el contenedor y repite <code>which hermes</code>. La misma ruta es el resultado esperado. Mantén los secretos fuera de las imágenes y del control de versiones, restringe los permisos y persiste únicamente lo necesario.</p>
+          </section>
+
+          <section id="fallo">
+            <p class="section-label">05 / MODO DE FALLO</p>
+            <h2>El texto convincente parecía ejecución</h2>
+            <p>La primera configuración parecía funcional: el modelo entendía las solicitudes y devolvía comandos. La evidencia ausente era el propio evento de herramienta.</p>
+            <div class="risk-table-wrap"><table class="risk-table"><thead><tr><th>Respuesta observada</th><th>Interpretación</th></tr></thead><tbody><tr><td><code>bash<br>pwd</code></td><td><span class="status-fail">SIMULADO</span> Solo texto con forma de comando</td></tr><tr><td><code>💻 preparing terminal…<br>💻 $ pwd</code></td><td><span class="status-pass">EJECUTADO</span> El harness invocó la herramienta</td></tr></tbody></table></div>
+            <p>Una prueba más fuerte exige una salida impredecible derivada del entorno:</p>
+            <div class="code-frame"><div class="code-frame__title">prompt enviado a Hermes</div><pre><code>Usa exclusivamente la herramienta de terminal.
+
+Ejecuta:
+cat /proc/sys/kernel/random/uuid &amp;&amp; pwd &amp;&amp; hostname
+
+No simules la salida. Devuelve el stdout real.</code></pre></div>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>Evidencia esperada en Hermes</p></div><pre><code>💻 preparing terminal…
+💻 $ cat /proc/sys/kernel/random/uuid &amp;&amp; pwd &amp;&amp; hostname
+
+Salida esperada (los valores varían):
+&lt;UUID aleatorio&gt;
+&lt;directorio de trabajo actual&gt;
+&lt;hostname del contenedor&gt;</code></pre></div>
+            <div class="callout warning"><strong>Límite de seguridad</strong><p>Utiliza únicamente un laboratorio aislado o sistemas para los que tengas autorización explícita. Verifica los cambios de estado de forma independiente y nunca uses datos del usuario como fixture de ejecución.</p></div>
+          </section>
+
+          <section id="tool-calling">
+            <p class="section-label">06 / TOOL CALLING</p>
+            <h2>Probar el modelo y el transporte de forma independiente</h2>
+            <p>Una solicitud directa a Ollama eliminó Hermes, las herramientas de Docker y el shell del dominio de fallo inmediato:</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / prueba directa de la API compatible</p></div><pre><code><span class="cmd">$ curl -s http://localhost:11434/v1/chat/completions \</span>
+<span class="cmd">  -H 'Content-Type: application/json' \</span>
+<span class="cmd">  -d '{</span>
+<span class="cmd">    "model":"qwen3.5:9b",</span>
+<span class="cmd">    "messages":[{"role":"user","content":"Execute pwd using the terminal tool."}],</span>
+<span class="cmd">    "tools":[{"type":"function","function":{</span>
+<span class="cmd">      "name":"terminal",</span>
+<span class="cmd">      "description":"Execute a command in the terminal",</span>
+<span class="cmd">      "parameters":{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}</span>
+<span class="cmd">    }}]</span>
+<span class="cmd">  }'</span>
+
+Salida esperada (campos relevantes):
+{"tool_calls":[{"type":"function","function":{"name":"terminal",
+"arguments":"{\"command\":\"pwd\"}"}}],"finish_reason":"tool_calls"}</code></pre></div>
+            <p>Este resultado estableció que el modelo podía emitir una llamada nativa y que Ollama podía transportarla mediante la API compatible. Todavía no demostraba que Hermes ejecutaría la función.</p>
+            <div class="result-grid"><div><strong>Qwen</strong><span>tool call emitido</span></div><div><strong>Ollama</strong><span>esquema transportado</span></div><div><strong>API</strong><span>finish reason correcto</span></div><div><strong>Hermes</strong><span>aún bajo prueba</span></div></div>
+          </section>
+
+          <section id="mitmproxy">
+            <p class="section-label">07 / EVIDENCIA EN TRÁNSITO</p>
+            <h2>Inspeccionar lo que Hermes envía realmente</h2>
+            <p>mitmproxy se insertó temporalmente como reverse proxy entre Hermes y Ollama:</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / capturar solicitudes de Hermes</p></div><pre><code><span class="cmd">$ mitmdump --mode reverse:http://127.0.0.1:11434 \</span>
+<span class="cmd">  --listen-host 127.0.0.1 --listen-port 11435 \</span>
+<span class="cmd">  -w ~/hermes-ollama.flow</span>
+
+Salida esperada (resumida):
+Proxy server listening at http://127.0.0.1:11435</code></pre></div>
+            <div class="code-frame"><div class="code-frame__title">endpoint temporal de Hermes</div><pre><code>base_url: http://127.0.0.1:11435/v1</code></pre></div>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / inspeccionar el flujo guardado</p></div><pre><code><span class="cmd">$ mitmweb -r ~/hermes-ollama.flow</span>
+
+Salida esperada (resumida):
+Web server listening at http://127.0.0.1:8081</code></pre></div>
+            <p>La captura contenía un array <code>tools</code> poblado. Hermes estaba enviando las definiciones de herramientas, por lo que el fallo no era simplemente la ausencia del esquema.</p>
+            <div class="callout warning"><strong>Evidencia sensible</strong><p>Los flujos del proxy pueden contener prompts, instrucciones de sistema, esquemas, hostnames, secretos y datos del assessment. Protégelos, sanitízalos y consérvalos de acuerdo con la política de evidencias.</p></div>
+          </section>
+
+          <section id="contexto">
+            <p class="section-label">08 / CONTEXTO</p>
+            <h2>Alinear Ollama y Hermes en 64K</h2>
+            <p>La configuración original asignaba un contexto innecesariamente agresivo para el hardware disponible. El laboratorio que funcionó utilizó una variante dedicada de 64K.</p>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / crear variante de modelo 64K</p></div><pre><code><span class="cmd">$ cat &gt; ~/Modelfile-qwen35-64k &lt;&lt;'EOF'</span>
+<span class="cmd">FROM qwen3.5:9b</span>
+<span class="cmd">PARAMETER num_ctx 64000</span>
+<span class="cmd">EOF</span>
+Salida esperada: sin stdout; código de salida 0
+
+<span class="cmd">$ ollama create qwen3.5:9b-64k -f ~/Modelfile-qwen35-64k</span>
+Salida esperada (última línea):
+success</code></pre></div>
+            <div class="terminal-evidence"><div class="terminal-evidence__bar"><span></span><span></span><span></span><p>host / verificar modelo y contexto efectivo</p></div><pre><code><span class="cmd">$ ollama ls</span>
+Salida esperada (filas relevantes):
+NAME
+qwen3.5:9b-64k
+qwen3.5:9b
+
+<span class="cmd">$ ollama run qwen3.5:9b-64k "Reply only with: ready"</span>
+Salida esperada:
+ready
+
+<span class="cmd">$ ollama ps</span>
+Salida esperada (columnas relevantes):
+NAME                CONTEXT
+qwen3.5:9b-64k      64000</code></pre></div>
+            <p>Hermes se configuró después con <code>context_length: 64000</code>. En el laboratorio observado, esta alineación cambió el comportamiento desde texto con forma de comando hacia ejecución estructurada de herramientas.</p>
+            <blockquote>64K no enseñó mágicamente tool calling a Qwen. La prueba directa de la API ya había demostrado esa capacidad. La evidencia sostiene una conclusión más estrecha: la fiabilidad agéntica depende de la configuración completa de inferencia.</blockquote>
+            <h3>¿Qué significa 6.43K/64K?</h3>
+            <p>La conversación visible es solo una parte del contexto de trabajo. Las instrucciones de sistema, los esquemas de herramientas, las skills, las observaciones previas y el estado del agente también consumen tokens. Una ejecución nueva puede comenzar con varios miles de tokens ya ocupados.</p>
+            <div class="code-frame"><div class="code-frame__title">indicador de contexto</div><pre><code>qwen3.5:9b-64k │ 6.43K/64K │ 10%
+
+≈ 6,430 tokens ocupados
+≈ 57,570 tokens disponibles</code></pre></div>
+            <p>Más grande no significa automáticamente mejor. El crecimiento de la KV cache puede provocar presión de memoria, swap y latencia severa. En este laboratorio, una configuración 14B con un contexto grande superó la capacidad práctica de un equipo Apple Silicon con 18 GB.</p>
+          </section>
+
+          <section id="trabajo-largo">
+            <p class="section-label">09 / MEMORIA OPERATIVA</p>
+            <h2>Usar el contexto como memoria de trabajo, no como almacén de evidencia</h2>
+            <p>El trabajo prolongado debe externalizar estado estructurado en lugar de mantener horas de salida cruda dentro del prompt:</p>
+            <div class="code-frame"><div class="code-frame__title">workspace delimitado del engagement</div><pre><code>/workspace/engagement/
+├── scope.yaml
+├── hosts.json
+├── users.json
+├── services.json
+├── findings.md
+├── attack-paths.json
+├── evidence/
+└── state.md</code></pre></div>
+            <div class="architecture-figure"><div class="architecture-flow"><div><span>ejecutar</span><small>herramienta aprobada</small></div><i>→</i><div class="gate"><span>parsear + persistir</span><small>evidencia estructurada</small></div><i>→</i><div><span>resumir</span><small>continuar con seguridad</small></div></div><figcaption>El prompt conserva el razonamiento actual; los archivos duraderos conservan el alcance, la evidencia y el estado operativo.</figcaption></div>
+            <p>Antes de considerar autonomía prolongada, ejecuta una prueba de resistencia delimitada dentro de un laboratorio aislado. Valida la retención del alcance, los timeouts, el manejo de errores, la captura de evidencias, la corrección de comandos y los controles de parada. No dejes al agente sin supervisión contra un entorno real hasta demostrar esas propiedades.</p>
+          </section>
+
+          <section id="lecciones">
+            <p class="section-label">10 / LECCIONES APRENDIDAS</p>
+            <h2>Lo que sobrevivió al proceso de depuración</h2>
+            <div class="evidence-list">
+              <div><span class="status-pass">01</span><p><b>Exigir evidencia de ejecución.</b> Una salida convincente no es prueba; verifica eventos visibles de herramientas y resultados derivados del entorno.</p></div>
+              <div><span class="status-pass">02</span><p><b>Probar cada capa de forma independiente.</b> Las solicitudes directas y las capturas del proxy reducen un dominio de fallo grande a componentes observables.</p></div>
+              <div><span class="status-pass">03</span><p><b>El harness importa.</b> Un modelo capaz con un harness o una configuración desalineada puede comportarse como un agente deficiente.</p></div>
+              <div><span class="status-pass">04</span><p><b>Alinear el contexto efectivo.</b> Verifica el contexto cargado por Ollama y la expectativa del cliente en vez de confiar solo en la configuración.</p></div>
+              <div><span class="status-pass">05</span><p><b>Preferir estabilidad frente al tamaño máximo.</b> Un modelo 9B estable a 64K es más útil que uno mayor que inutiliza el equipo.</p></div>
+              <div><span class="status-pass">06</span><p><b>Persistir el estado deliberadamente.</b> Usa <code>my-resources</code> para las herramientas y archivos duraderos para el alcance, los resultados y la evidencia.</p></div>
+              <div><span class="status-partial">07</span><p><b>Tool calling no es autonomía.</b> El pentesting real también requiere aprobaciones, auditoría, manejo de secretos, límites estrictos, timeouts y un mecanismo de parada de emergencia.</p></div>
+            </div>
+          </section>
+
+          <section id="conclusion">
+            <p class="section-label">11 / CONCLUSIÓN</p>
+            <h2>Un agente local es un sistema, no un modelo</h2>
+            <p>El laboratorio funcional combinó <code>qwen3.5:9b-64k</code> para el razonamiento, Ollama para la inferencia local, Hermes para el bucle de herramientas, Exegol para el entorno operativo, <code>my-resources</code> para la persistencia y mitmproxy para obtener visibilidad temporal a nivel de tráfico.</p>
+            <p>Alinear el servidor y el harness en 64K convirtió una configuración aparentemente capaz, pero que no ejecutaba, en otra que produjo llamadas estructuradas y evidencia real de terminal. El siguiente hito responsable es una prueba controlada de resistencia con alcance estricto, estado persistente, acciones auditables y resultados reproducibles, no autonomía sin restricciones.</p>
+            <div class="decision-box"><strong>RESULTADO DEL LAB: BASELINE FUNCIONAL</strong><p>Las llamadas a herramientas y la ejecución de terminal fueron observadas después de alinear el contexto. Este laboratorio no demostró preparación para producción, seguridad autónoma ni fiabilidad general.</p></div>
+          </section>
+
+          <section class="references" aria-labelledby="referencias-titulo">
+            <p class="section-label">REFERENCIAS</p>
+            <h2 id="referencias-titulo">Documentación primaria</h2>
+            <ol>
+              <li><a href="https://github.com/NousResearch/hermes-agent">Repositorio de Hermes Agent</a></li>
+              <li><a href="https://docs.ollama.com/">Documentación de Ollama</a></li>
+              <li><a href="https://docs.ollama.com/api/">Documentación de la API de Ollama</a></li>
+              <li><a href="https://docs.exegol.com/">Documentación de Exegol</a></li>
+              <li><a href="https://docs.mitmproxy.org/">Documentación de mitmproxy</a></li>
+            </ol>
+            <p class="version-note">Todos los comandos son una instantánea del flujo del laboratorio. Las salidas marcadas como “esperadas” describen la condición de éxito y pueden variar ligeramente según la versión instalada o el entorno.</p>
+          </section>
+        </div>
+      </div>
+    </article>
+    <footer><p>© <span id="year">2026</span> countzero // lab archive</p><a href="#article">volver_arriba()</a></footer>
+  </main>
+</body>
+</html>
