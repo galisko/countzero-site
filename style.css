@@ -487,6 +487,9 @@ footer a { color: var(--green-dim); text-decoration: none; }
 .terminal-evidence__bar p { margin: auto; padding-right: 3rem; color: #66736b; font-size: .66rem; }
 .terminal-evidence pre { margin: 0; padding: 1.2rem; overflow-x: auto; color: #aab7af; font: 400 .75rem/1.75 "IBM Plex Mono", monospace; }
 .terminal-evidence .cmd { color: var(--green); }
+.evidence-shot { margin: 1.8rem 0 2.5rem; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+.evidence-shot img { display: block; width: 100%; height: auto; }
+.evidence-shot figcaption { padding: .85rem 1rem; color: var(--muted); font-size: .72rem; }
 .risk-table-wrap { overflow-x: auto; margin: 2rem 0; border: 1px solid var(--line); }
 .risk-table { width: 100%; border-collapse: collapse; font-size: .76rem; }
 .risk-table th,
